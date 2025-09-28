@@ -1,95 +1,488 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CyberGuardians</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      background: black;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CyberGuardians — Terminal</title>
+<style>
+  :root{
+    --bg:#071017;
+    --panel:#0b1620;
+    --text:#9be7c7;
+    --muted:#6aa89a;
+    --accent:#00f0ff;
+    --green:#7efc8c;
+    --danger:#ff5c7a;
+    --glass: rgba(255,255,255,0.03);
+    --term-width:820px;
+    --term-height:520px;
+    --mono: 'SFMono-Regular',Consolas,"Liberation Mono",Menlo,Monaco,monospace;
+  }
 
-    video {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      min-width: 100%;
-      min-height: 100%;
-      width: auto;
-      height: auto;
-      transform: translate(-50%, -50%);
-      object-fit: cover;
-      z-index: 0;
-    }
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% 10%, rgba(0,200,255,0.03), transparent 10%),
+      linear-gradient(180deg, #02060a 0%, #041018 100%);
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+  }
 
-    /* Overlay styling */
-    .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #00ff00;
-      text-shadow: 0 0 8px black;
-      z-index: 1;
-      text-align: center;
-    }
+  .terminal {
+    width:var(--term-width);
+    max-width:calc(100% - 40px);
+    height:var(--term-height);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;
+    box-shadow: 0 20px 60px rgba(2,8,12,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    overflow:hidden;
+    display:grid;
+    grid-template-columns: 260px 1fr;
+    gap:0;
+    position:relative;
+    border:1px solid rgba(255,255,255,0.03);
+  }
 
-    .overlay img {
-      max-width: 150px;
-      margin-bottom: 20px;
-    }
+  /* left panel (logo & club) */
+  .left {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.0));
+    padding:28px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:18px;
+  }
 
-    .overlay h1 {
-      font-family: 'Courier New', monospace;
-      font-size: 2em;
-      margin: 10px 0;
-    }
+  .logo {
+    width:160px;
+    height:160px;
+    border-radius:12px;
+    background:var(--glass);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .logo img{width:100%;height:100%;object-fit:contain;display:block;}
 
-    .access {
-      font-family: 'Courier New', monospace;
-      font-size: 1.5em;
-      margin-top: 20px;
-      color: limegreen;
-      animation: blink 1s infinite;
-    }
+  .club {
+    text-align:center;
+  }
+  .club h1{
+    margin:0;
+    font-family:var(--mono);
+    font-weight:700;
+    letter-spacing:1px;
+    font-size:18px;
+    color:var(--accent);
+  }
+  .club p{
+    margin:4px 0 0 0;
+    color:var(--muted);
+    font-size:13px;
+    font-family:var(--mono);
+  }
 
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
-  </style>
+  /* right panel - terminal area */
+  .console {
+    padding:22px;
+    font-family:var(--mono);
+    font-size:15px;
+    color:var(--text);
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.02), rgba(255,255,255,0.0));
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .status-line{
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .dot{
+    width:12px;height:12px;border-radius:50%;
+    background:rgba(255,255,255,0.03); box-shadow: inset 0 -2px 6px rgba(0,0,0,0.6);
+  }
+  .dot.green{background:linear-gradient(180deg,#88ffb0,#22c06a);}
+  .dot.yellow{background:linear-gradient(180deg,#ffd37a,#ffb33a);}
+  .dot.red{background:linear-gradient(180deg,#ff9aa2,#ff5c69);}
+
+  .term-screen{
+    background:linear-gradient(180deg, rgba(0,0,0,0.18), rgba(255,255,255,0.01));
+    border-radius:8px;
+    padding:18px;
+    height:100%;
+    flex:1;
+    overflow:hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    display:flex;
+    flex-direction:column;
+  }
+
+  .output {
+    flex:1;
+    overflow:auto;
+    padding-right:8px;
+    line-height:1.45;
+    white-space:pre-wrap;
+    color:var(--muted);
+  }
+
+  .prompt { color: var(--accent); }
+  .highlight { color: var(--green); font-weight:700; }
+
+  /* typed cursor */
+  .cursor {
+    display:inline-block;
+    width:7px;
+    height:18px;
+    background:var(--accent);
+    margin-left:6px;
+    vertical-align:middle;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity:0 } }
+
+  /* big ACCESS screen (hidden then shown) */
+  .access-overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(180deg, rgba(2,8,12,0.7), rgba(2,8,12,0.85));
+    z-index:10;
+    flex-direction:column;
+    gap:16px;
+    padding:20px;
+    transform:scale(0.98);
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .access-box{
+    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    padding:28px 40px;
+    border-radius:12px;
+    text-align:center;
+    border:1px solid rgba(255,255,255,0.04);
+  }
+  .access-title{
+    font-family:var(--mono);
+    font-size:42px;
+    font-weight:900;
+    letter-spacing:6px;
+    position:relative;
+  }
+
+  /* glitch effect */
+  .glitch {
+    position:relative;
+    display:inline-block;
+    color:var(--green);
+    text-transform:uppercase;
+    font-weight:900;
+    font-family:var(--mono);
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text);
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    overflow:hidden;
+    clip:rect(0,9999px,0,0);
+  }
+  .glitch::before{
+    animation:glitchTop 1.6s infinite linear;
+    color:#fff;
+    z-index:2;
+    opacity:0.9;
+    text-shadow:-4px 0 var(--danger);
+  }
+  .glitch::after{
+    animation:glitchBottom 1.8s infinite linear;
+    color:#fff;
+    z-index:1;
+    opacity:0.85;
+    text-shadow:4px 0 var(--accent);
+  }
+
+  @keyframes glitchTop {
+    0% { clip:rect(0,900px,0,0); transform:translate(0,0); }
+    10% { clip:rect(0,900px,8px,0); transform:translate(-2px,-2px); }
+    20% { clip:rect(8px,900px,18px,0); transform:translate(2px,-1px); }
+    30% { clip:rect(0,900px,6px,0); transform:translate(-1px,1px); }
+    40% { clip:rect(6px,900px,24px,0); transform:translate(0,-2px); }
+    50% { clip:rect(0,900px,10px,0); transform:translate(3px,0); }
+    100% { clip:rect(0,900px,0,0); transform:translate(0,0); }
+  }
+  @keyframes glitchBottom {
+    0% { clip:rect(0,900px,0,0); transform:translate(0,0); }
+    8% { clip:rect(10px,900px,30px,0); transform:translate(2px,2px); }
+    18% { clip:rect(0px,900px,10px,0); transform:translate(-2px,1px); }
+    28% { clip:rect(6px,900px,18px,0); transform:translate(1px,-1px); }
+    38% { clip:rect(0,900px,6px,0); transform:translate(-1px,2px); }
+    60% { clip:rect(0,900px,0,0); transform:translate(0,0); }
+  }
+
+  .access-sub{
+    font-family:var(--mono);
+    color:var(--muted);
+    font-size:13px;
+    margin-top:6px;
+  }
+
+  /* small scanlines / noise overlay */
+  .noise {
+    pointer-events:none;
+    position:absolute;
+    inset:0;
+    background-image: linear-gradient(transparent 92%, rgba(0,0,0,0.06) 100%);
+    mix-blend-mode:overlay;
+    opacity:0.7;
+    z-index:12;
+    background-size:100% 2px;
+  }
+
+  /* footer small text */
+  .footer {
+    font-size:12px;
+    color:rgba(155,231,199,0.6);
+    font-family:var(--mono);
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+
+  /* responsive */
+  @media (max-width:720px){
+    .terminal { grid-template-columns: 1fr; height:700px; }
+    .left{ flex-direction:row; align-items:center; justify-content:space-between; padding:18px 20px;}
+    .logo{width:64px;height:64px}
+    .club h1{font-size:14px}
+    .access-title{font-size:34px}
+  }
+</style>
 </head>
 <body>
-  <!-- Background video -->
-  <video id="myVideo" playsinline autoplay muted loop>
-    <source src="VID_20230228_213310.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
+  <div class="terminal" role="region" aria-label="CyberGuardians verification terminal">
+    <div class="left" aria-hidden="false">
+      <div class="logo" title="LOGO MZYAN">
+        <img src="LOGO MZYAN.png" alt="LOGO MZYAN" onerror="this.style.objectFit='contain'; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><rect fill=%22%2301171b%22 width=%22100%25%22 height=%22100%25%22 rx=%2212%22 /><text x=%2250%25%22 y=%2250%25%22 dy=%22.35em%22 font-family=%22monospace%22 font-size=%2220%22 fill=%22%239be7c7%22 text-anchor=%22middle%22>LOGO</text></svg>'" />
+      </div>
+      <div class="club">
+        <h1>CyberGuardians</h1>
+        <p>Access Control — Secure Club Terminal</p>
+      </div>
 
-  <!-- Overlay -->
-  <div class="overlay">
-    <img src="LOGO MZYAN.png" alt="CyberGuardians Logo">
-    <h1>CyberGuardians</h1>
-    <div class="access">ACCESS GRANTED</div>
+      <div style="flex:1"></div>
+
+      <div class="footer" style="align-self:stretch; justify-content:space-between;">
+        <div>v1.3</div>
+        <div id="clock"></div>
+      </div>
+    </div>
+
+    <div class="console">
+      <div class="status-line">
+        <div class="dot green" aria-hidden="true"></div>
+        <div class="dot yellow" aria-hidden="true"></div>
+        <div class="dot red" aria-hidden="true"></div>
+        <div style="flex:1"></div>
+        <div style="font-size:12px;color:var(--muted);">Terminal boot sequence</div>
+      </div>
+
+      <div class="term-screen" id="termScreen" role="log" aria-live="polite">
+        <div class="output" id="output">
+/* CyberGuardians Secure Terminal */
+</div>
+
+        <div style="height:6px"></div>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="prompt">guest@cyberguardians:~$</div>
+          <div id="typedLine" style="flex:1"></div>
+          <div class="cursor" id="cursor" aria-hidden="true"></div>
+        </div>
+
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button id="replayBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 14px;border-radius:8px;color:var(--muted);font-family:var(--mono);cursor:pointer;">
+          Replay
+        </button>
+        <div style="flex:1"></div>
+        <div style="font-size:12px;color:var(--muted);">Agent verification demo</div>
+      </div>
+
+      <div class="access-overlay" id="accessOverlay" aria-hidden="true">
+        <div class="access-box" role="status" aria-live="assertive">
+          <div class="access-title glitch" id="accessText" data-text="ACCESS GRANTED">ACCESS GRANTED</div>
+          <div class="access-sub" id="accessSub">Welcome, authorized agent. Session initiated.</div>
+        </div>
+      </div>
+
+      <div class="noise" aria-hidden="true"></div>
+    </div>
   </div>
 
-  <script>
-    // Mobile autoplay fix
-    const video = document.getElementById('myVideo');
-    video.muted = true;
-    video.play().catch(() => {
-      document.body.addEventListener('touchstart', () => {
-        video.play();
-      }, { once: true });
+<script>
+  // SETTINGS (easy to change)
+  const lines = [
+    "[INIT] Loading secure modules...",
+    "[OK] Crypto engine ready.",
+    "[INFO] Scanning client agent...",
+    "Fingerprint: 3A:5F:9B:2C:81:7D",
+    "IP: 192.168.0.11",
+    "[INFO] Checking credentials against CyberGuardians DB",
+    "[INFO] Applying heuristics...",
+    "[OK] Agent profile matched.",
+    "[INFO] Finalizing verification..."
+  ];
+
+  const outputEl = document.getElementById('output');
+  const typedEl = document.getElementById('typedLine');
+  const cursor = document.getElementById('cursor');
+  const overlay = document.getElementById('accessOverlay');
+  const accessSub = document.getElementById('accessSub');
+  const replayBtn = document.getElementById('replayBtn');
+  const clock = document.getElementById('clock');
+
+  // Clock
+  function tickClock(){
+    const d = new Date();
+    clock.textContent = d.toLocaleString();
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // Typewriter helper
+  function typeText(el, text, speed=18){
+    return new Promise(res=>{
+      el.textContent = "";
+      let i=0;
+      function step(){
+        if(i < text.length){
+          el.textContent += text[i++];
+          el.scrollIntoView({behavior:"smooth", block:"nearest"});
+          setTimeout(step, speed + Math.random()*20);
+        } else res();
+      }
+      step();
     });
-  </script>
+  }
+
+  // append line to output with small fade
+  function appendLine(t, cls){
+    const pre = document.createElement('div');
+    pre.textContent = t;
+    if(cls) pre.classList.add(cls);
+    outputEl.appendChild(pre);
+    outputEl.scrollTop = outputEl.scrollHeight;
+  }
+
+  // run full mock verification
+  async function runSequence(){
+    overlay.style.pointerEvents = "none";
+    overlay.style.opacity = 0;
+    overlay.style.transform = "scale(0.98)";
+    outputEl.innerHTML = "/* CyberGuardians Secure Terminal */\n";
+    typedEl.textContent = "";
+    document.getElementById('accessText').setAttribute('data-text','ACCESS GRANTED');
+    accessSub.textContent = "Welcome, authorized agent. Session initiated.";
+    cursor.style.display = "inline-block";
+
+    // simulate lines typed and appended
+    for(let i=0;i<lines.length;i++){
+      await typeText(typedEl, lines[i], 16);
+      await new Promise(r=>setTimeout(r, 350));
+      appendLine("> " + lines[i]);
+      typedEl.textContent = "";
+    }
+
+    // show progress bar logic
+    appendLine("> [PROGRESS] Verifying modules");
+    const prog = document.createElement('div');
+    prog.style.marginTop="8px";
+    prog.style.width="100%";
+    prog.style.height="12px";
+    prog.style.background="rgba(255,255,255,0.03)";
+    prog.style.borderRadius="6px";
+    prog.style.overflow="hidden";
+    const bar = document.createElement('div');
+    bar.style.height="100%";
+    bar.style.width="0%";
+    bar.style.background="linear-gradient(90deg,#0affd1,#00b3ff)";
+    bar.style.transition="width 1.2s linear";
+    prog.appendChild(bar);
+    outputEl.appendChild(prog);
+    outputEl.scrollTop = outputEl.scrollHeight;
+    await new Promise(r=>setTimeout(r,200));
+    bar.style.width="32%";
+    await new Promise(r=>setTimeout(r,900));
+    bar.style.width="68%";
+    await new Promise(r=>setTimeout(r,900));
+    bar.style.width="100%";
+    await new Promise(r=>setTimeout(r,700));
+
+    appendLine("> [OK] Modules verified.");
+    await new Promise(r=>setTimeout(r,400));
+
+    appendLine("> [SECURITY] Final check: PASS");
+    await new Promise(r=>setTimeout(r,500));
+
+    // reveal glitchy access
+    showAccess();
+  }
+
+  function showAccess(){
+    // set some randomized message
+    const names = ["Authorized Agent","Operator","Member #742","Admin"];
+    accessSub.textContent = "Welcome, " + names[Math.floor(Math.random()*names.length)] + ". Session initiated.";
+    overlay.style.transition = "opacity .6s ease, transform .6s cubic-bezier(.2,.9,.2,1)";
+    overlay.style.pointerEvents = "auto";
+    overlay.style.opacity = 1;
+    overlay.style.transform = "scale(1)";
+    cursor.style.display = "none";
+
+    // small visual shake/glitch on terminal
+    const term = document.querySelector('.terminal');
+    term.animate([
+      { transform: 'translateY(0)'},
+      { transform: 'translateY(-2px) rotate(-0.2deg)'},
+      { transform: 'translateY(0) rotate(0.1deg)'}
+    ], { duration: 420, iterations: 3 });
+
+    // micro flicker of text color
+    const accessEl = document.getElementById('accessText');
+    accessEl.animate([
+      { opacity: 1, filter: 'hue-rotate(0deg)'},
+      { opacity: 0.95, filter: 'hue-rotate(15deg)'},
+      { opacity: 1, filter: 'hue-rotate(-8deg)'}
+    ], { duration: 900, iterations: 4 });
+  }
+
+  // hook replay button
+  replayBtn.addEventListener('click', ()=> runSequence());
+
+  // auto-run once when page loads
+  window.addEventListener('load', ()=> {
+    setTimeout(()=> runSequence(), 700);
+  });
+
+  // accessibility: allow pressing Enter to replay
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') runSequence();
+  });
+</script>
 </body>
 </html>
